@@ -10,7 +10,8 @@ PROPERTIES = ['associativity', 'commutativity', 'l_distr', 'r_distr', 'l_absorb'
               'l_inverse', 'r_inverse', 'solv']
 SINGLE_PROPERTIES = ['associativity', 'commutativity', 'idem', 'l_neutral', 'r_neutral',
                      'l_contractility', 'r_contractility', 'l_inverse', 'r_inverse', 'solv']  # свойства одной таблицы
-DOUBLE_PROPERTIES = ['l_distr', 'r_distr', 'l_absorb', 'r_absorb']
+# DOUBLE_PROPERTIES = ['l_distr', 'r_distr', 'l_absorb', 'r_absorb']  не использую поглощение поэтому пусть так
+DOUBLE_PROPERTIES = ['l_distr', 'r_distr']
 
 
 def colored(text: str, color: str) -> str:
@@ -194,7 +195,7 @@ ONE_OPERATION_STRUCTURE_PROPERTIES = [[],  # magma
                                       ]
 
 
-def check_structure_with_one_operation2(table, n: int):
+def check_structure_with_one_operation(table, n: int):  # FIXME нужен тест
     structure_type = 'magma..'
     table_props = table_properties_check(table, n)
     if table_props[0]:  # associative
@@ -211,8 +212,8 @@ def check_structure_with_one_operation2(table, n: int):
             structure_type = 'monoid'
             if table_props[2]:
                 structure_type = 'idem monoid'
-            if table_props[1]:
-                structure_type = 'commutative ' + structure_type
+        if table_props[1] and 'abel_group' not in structure_type:
+            structure_type = 'commutative ' + structure_type
     else:  # not assoc
         if table_props[5] and table_props[6] and table_props[9]:
             structure_type = 'quasigroup'
@@ -230,8 +231,8 @@ def check_structure_with_one_operation2(table, n: int):
 
 
 # FIXME хочу чтобы как регсы работало, чтобы [2, 3, 4] к унитарной магме относился и выводился idem unitar_magma
-def check_structure_with_one_operation(table, n: int):
-    structure_type = 'magma...'
+def check_structure_with_one_operation2(table, n: int):
+    structure_type = 'magma'
     table_props = table_properties_check(table, n)
     props2 = []
     for index, prop in enumerate(table_props):
@@ -251,8 +252,8 @@ def check_structure_with_two_operations(table1, table2, n: int):
     # положим первую операцию сложением, а вторую умножением
     algebra_type = 'nothing'
     double_properties1 = pair_tables_properties_check(table2, table1, n)
-    type1 = check_structure_with_one_operation2(table1, n)
-    type2 = check_structure_with_one_operation2(table2, n)
+    type1 = check_structure_with_one_operation(table1, n)
+    type2 = check_structure_with_one_operation(table2, n)
     # print('table types: ', type1, type2)
 
     if double_properties1[0:2] == [True, True]:
@@ -262,14 +263,14 @@ def check_structure_with_two_operations(table1, table2, n: int):
             algebra_type = 'ring with neutral'
 
         # проверяем на поле и тело
-        table2_with_no_neutral = []  # сужаем таблицу (без 0)
+        table2_with_no_neutral = []  # сужаем таблицу (без 0) # FIXME надо сужать именно строку из нейтральных, а не '0'
         for j in range(n-1):
             for i in range(n-1):
                 table2[j + 1][i + 1] -= 1
                 if table2[j + 1][i + 1] == -1:
                     return algebra_type
             table2_with_no_neutral.append(table2[j + 1][1:])
-        type2 = check_structure_with_one_operation2(table2_with_no_neutral, n - 1)
+        type2 = check_structure_with_one_operation(table2_with_no_neutral, n - 1)
         # print(table2_with_no_neutral, type2)
         if type1 == 'abel_group' and type2 == 'group':
             algebra_type = 'division ring'
