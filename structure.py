@@ -4,14 +4,18 @@ from properties_check import *
 
 colorama.init()
 st_reset = Style.RESET_ALL
-OPERATORS = ['+', '*', '^', '$']  # чисто для repr класса sw
+
+# для repr класса sw
+OPERATORS = ['+', '*', '^', '$']
+# все существующие свойства таблицы
 PROPERTIES = ['associativity', 'commutativity', 'l_distr', 'r_distr', 'l_absorb', 'r_absorb',
               'idem', 'l_neutral', 'r_neutral', 'l_contractility', 'r_contractility',
               'l_inverse', 'r_inverse', 'solv']
+# свойства одной таблицы
 SINGLE_PROPERTIES = ['associativity', 'commutativity', 'idem', 'l_neutral', 'r_neutral',
-                     'l_contractility', 'r_contractility', 'l_inverse', 'r_inverse', 'solv']  # свойства одной таблицы
-# DOUBLE_PROPERTIES = ['l_distr', 'r_distr', 'l_absorb', 'r_absorb']  не использую поглощение поэтому пусть так
-DOUBLE_PROPERTIES = ['l_distr', 'r_distr']
+                     'l_contractility', 'r_contractility', 'l_inverse', 'r_inverse', 'solv']
+# свойства двух таблиц
+DOUBLE_PROPERTIES = ['l_distr', 'r_distr', 'l_absorb', 'r_absorb']
 
 
 def colored(text: str, color: str) -> str:
@@ -29,6 +33,7 @@ def colored(text: str, color: str) -> str:
     return str(c + text + st_reset)
 
 
+# TODO вроде класс готов, но пока никак не используется. Надо ещё structure_state переписать
 class SW:
     def __init__(self, *tables):
         self.tables = []
@@ -156,6 +161,7 @@ def table_property_check(prop='associativity', n=0, *tables):  # проверк�
     return res
 
 
+# 0: a1; 1: a2; 2: a5; 3 4: a6; 5 6: a7; 7 8: a8; 9: a9;
 def table_properties_check(table, n=0):  # возвращает все свойства данной таблицы
     if table and n:
         table_props = [0] * 10  # свойства для таблиц с одной операцией
@@ -175,13 +181,13 @@ def pair_tables_properties_check(table1, table2, n=0):  # возвращает �
 
 
 # a9, a6 => a8; a9 => a7; a1, a8 => a9; a1, a8 => a7;
-# проверка таблиц с одной операцией на тип структуры
+# две константы-рудимента, раньше была процедура на проверку, в которой они использовались (ещё в классе есть)
 ONE_OPERATION_STRUCTURE_TYPES = ['magma',  # none,
                                  'quasigroup', 'unitar_magma', 'semigroup',  # a9, a6, a1
                                  'loop', 'reverse_semigroup', 'monoid',  # a6a9, a1a9, a1a6
                                  'group', 'abel_group', 'abel_group'  # a1a6a9, a1a2a6a9
                                  ]
-# a1 0; a2 1; a5 2; a6 3 4; a7 5 6; a8 7 8; a9 9;
+# a1: 0; a2: 1; a5: 2; a6: 3 4; a7: 5 6; a8: 7 8; a9: 9;
 ONE_OPERATION_STRUCTURE_PROPERTIES = [[],  # magma
                                       [5, 6, 9],  # quasigroup
                                       [3, 4],  # unitar magma
@@ -191,60 +197,58 @@ ONE_OPERATION_STRUCTURE_PROPERTIES = [[],  # magma
                                       [0, 3, 4],  # monoid
                                       [0, 3, 4, 5, 6, 7, 8, 9],  # group  2.1.4.7
                                       [0, 1, 3, 4, 5, 6, 7, 8, 9],  # abel_group
-                                      [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],  # abel_group
+                                      [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],  # idem abel_group
                                       ]
 
 
-def check_structure_with_one_operation(table, n: int):  # FIXME нужен тест
+def check_structure_with_one_operation(table, n: int):  # TODO нужен тест
     structure_type = 'magma..'
     table_props = table_properties_check(table, n)
-    if table_props[0]:  # associative
+
+    if table_props[0]:  # ассоциативна
         structure_type = 'semigroup'
-        if table_props[5] and table_props[6] and table_props[9]:
+        if table_props[5] and table_props[6] and table_props[9]:  # разрешима
             structure_type = 'reverse semigroup'
-            if (table_props[3] != -1) and (table_props[4] != -1):
+            if (table_props[3] != -1) and (table_props[4] != -1):  # нейтральный
                 structure_type = 'group'
-                if table_props[1]:
+                if table_props[1]:  # коммутативна
                     structure_type = 'abel_group'
-                    if table_props[2]:
-                        structure_type = 'idem abel_group'
         elif (table_props[3] != -1) and (table_props[4] != -1):
             structure_type = 'monoid'
-            if table_props[2]:
-                structure_type = 'idem monoid'
+
         if table_props[1] and 'abel_group' not in structure_type:
             structure_type = 'commutative ' + structure_type
-    else:  # not assoc
-        if table_props[5] and table_props[6] and table_props[9]:
-            structure_type = 'quasigroup'
-            if table_props[3] != -1 and table_props[4] != -1:
-                structure_type = 'loop'
+        if table_props[2]:
+            structure_type = 'idem ' + structure_type
 
-            if table_props[1]:
-                structure_type = 'commutative ' + structure_type
-            if table_props[2]:
-                structure_type = 'idem ' + structure_type
+    else:  # не ассоциативна
+        if table_props[5] and table_props[6] and table_props[9]:  # разрешима
+            structure_type = 'quasigroup'
+            if table_props[3] != -1 and table_props[4] != -1:  # нейтральный
+                structure_type = 'loop'
         else:
             if table_props[3] != -1 and table_props[4] != -1:
                 structure_type = 'unitar_magma'
+
+        if table_props[1]:
+            structure_type = 'commutative ' + structure_type
+        if table_props[2]:
+            structure_type = 'idem ' + structure_type
+
     return structure_type
 
 
-# FIXME хочу чтобы как регсы работало, чтобы [2, 3, 4] к унитарной магме относился и выводился idem unitar_magma
-def check_structure_with_one_operation2(table, n: int):
-    structure_type = 'magma'
-    table_props = table_properties_check(table, n)
-    props2 = []
-    for index, prop in enumerate(table_props):
-        if (type(prop) is int or prop) and prop != -1:
-            props2.append(index)
-    # print(table_props)
-    # print(props2)
-    for index, str_prop in enumerate(ONE_OPERATION_STRUCTURE_PROPERTIES):
-        if props2 == str_prop:
-            structure_type = ONE_OPERATION_STRUCTURE_TYPES[index]
-    # print(structure_type)
-    return structure_type
+def table_shrink_neutral(table, n: int, neutral: int):  # сужение таблицы (без нейтрального)
+    if neutral == -1:
+        return -1
+    table_with_no_neutral = []  # сужаем таблицу (без 0) # FIXME надо сужать именно строку из нейтральных, а не '0'
+    for j in range(n - 1):
+        for i in range(n - 1):
+            table[j + 1][i + 1] -= 1
+            if table[j + 1][i + 1] == -1:
+                return -1
+        table_with_no_neutral.append(table[j + 1][1:])
+    return table_with_no_neutral
 
 
 # возвращает тип структуры по двум таблицам
@@ -256,27 +260,24 @@ def check_structure_with_two_operations(table1, table2, n: int):
     type2 = check_structure_with_one_operation(table2, n)
     # print('table types: ', type1, type2)
 
-    if double_properties1[0:2] == [True, True]:
+    if double_properties1[0:2] == [True, True]:  # дистрибутивны
         if type1 == 'abel_group' and 'semigroup' in type2:
             algebra_type = 'ring'
         elif type1 == 'abel_group' and 'monoid' in type2:
             algebra_type = 'ring with neutral'
 
         # проверяем на поле и тело
-        table2_with_no_neutral = []  # сужаем таблицу (без 0) # FIXME надо сужать именно строку из нейтральных, а не '0'
-        for j in range(n-1):
-            for i in range(n-1):
-                table2[j + 1][i + 1] -= 1
-                if table2[j + 1][i + 1] == -1:
-                    return algebra_type
-            table2_with_no_neutral.append(table2[j + 1][1:])
+        table1_neutral = table_property_check('l_neutral', n, table1) == table_property_check('r_neutral', n, table1)
+        table2_with_no_neutral = table_shrink_neutral(table2, n, table1_neutral)  # сужаем таблицу (без 0)
+        if table2_with_no_neutral == -1:
+            return algebra_type  # не получается поле
         type2 = check_structure_with_one_operation(table2_with_no_neutral, n - 1)
         # print(table2_with_no_neutral, type2)
         if type1 == 'abel_group' and type2 == 'group':
             algebra_type = 'division ring'
         if type1 == 'abel_group' and 'abel_group' in type2:
             algebra_type = 'field'
-    else:
+    else:  # не дистрибутивно
         # print('not distributive idk')
         pass
     return algebra_type

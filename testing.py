@@ -1,5 +1,6 @@
 from structure import *
 from properties_check import *
+import main_dialog as md
 
 
 def test_class_init_and_display():  # ok
@@ -179,9 +180,9 @@ def test_structure_check_structure_with_one_op2():  # ok
         [2, 3, 0, 1],
         [1, 0, 2, 3]
     ]
-    print(check_structure_with_one_operation2(table, 4))
-    print(check_structure_with_one_operation2(table2, 4))
-    print(check_structure_with_one_operation2(table3, 4))
+    print(check_structure_with_one_operation(table, 4))
+    print(check_structure_with_one_operation(table2, 4))
+    print(check_structure_with_one_operation(table3, 4))
 
 
 def test_structure_check_structure_with_two_ops():  # field ok
@@ -201,10 +202,32 @@ def test_structure_check_structure_with_two_ops():  # field ok
     print(check_structure_with_one_operation(table2, 4))
     print(check_structure_with_one_operation(table3, 4))
 
-    print(check_structure_with_one_operation2(table2, 4))
-    print(check_structure_with_one_operation2(table3, 4))
+    # print(check_structure_with_one_operation2(table2, 4))
+    # print(check_structure_with_one_operation2(table3, 4))
     print('--'*30)
     print(check_structure_with_two_operations(table2, table3, 4))
+
+
+def test_md_non_isomorf_gen():
+    k = int(input())
+    nums = 0
+    try:
+        for num in md.generate_non_isomorf_nums_fixed(k):
+            print(num)
+            nums += 1
+    except KeyboardInterrupt:
+        print('прервано', num)
+    print('fixed', nums)
+
+    nums = 0
+    try:
+        for num in md.generate_non_isomorf_nums(k):
+            print(num)
+            nums += 1
+    except KeyboardInterrupt:
+        print('прервано', num)
+    print('old', nums)
+    # print(len(nums))
 
 
 def main():
@@ -212,8 +235,9 @@ def main():
     # test_structure_sw_structure_state()
     # test_structure_check_structure_with_one_op()
     # test_structure_check_structure_with_one_op2()
-    test_structure_check_structure_with_two_ops()
+    # test_structure_check_structure_with_two_ops()
     # test_neutral()
+    test_md_non_isomorf_gen()
 
 
 if __name__ == "__main__":

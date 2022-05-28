@@ -39,19 +39,57 @@ def table_to_num(table, size: int):  # перевод таблицы в опре
     return num
 
 
-def generate_non_isomorf_nums(k: int):  # выдаёт неизоморфные номера таблиц на k-элементном множестве  # FIXME
+def generate_non_isomorf_nums(k: int):  # выдаёт неизоморфные номера таблиц на k-элементном множестве  # FIXME тяжко
     repeated_nums = set()
     for num in range(k**(k*k)):
         if num not in repeated_nums:
             yield num
+        else:
+            repeated_nums.remove(num)
         for indexes in combinations(range(k), 2):
             table = generate_table(num, k)
             new_table = move_columns(table, k, indexes[0], indexes[1])
             isomorf_num = table_to_num(new_table, k)
             # print(isomorf_num)
-            if isomorf_num not in repeated_nums:
+            if isomorf_num not in repeated_nums and isomorf_num > num:
                 repeated_nums.add(isomorf_num)
     # print(repeated_nums)
+
+
+PERMUTATIONS_FOR_3LEN_SET = [(0, 1), (0, 2), (1, 2), [(0, 1), (1, 2)], [(1, 2), (0, 1)]]
+
+
+def generate_non_isomorf_nums_fixed(k: int):  # костыль
+    repeated_nums = set()
+    for num in range(k ** (k * k)):
+        if num not in repeated_nums:  # число неизоморфно ничему
+            yield num
+        else:
+            repeated_nums.remove(num)
+
+        if k == 2:
+            for indexes in combinations(range(k), 2):
+                table = generate_table(num, k)
+                new_table = move_columns(table, k, indexes[0], indexes[1])
+                isomorf_num = table_to_num(new_table, k)
+                if isomorf_num not in repeated_nums and isomorf_num > num:
+                    repeated_nums.add(isomorf_num)
+        elif k == 3:
+            for permutation in PERMUTATIONS_FOR_3LEN_SET:
+                table = generate_table(num, k)
+                if type(permutation) is not tuple:
+                    for indexes in permutation:
+                        new_table = move_columns(table, k, indexes[0], indexes[1])
+
+                        isomorf_num = table_to_num(new_table, k)
+                        if isomorf_num not in repeated_nums and isomorf_num > num:
+                            repeated_nums.add(isomorf_num)
+                else:
+                    new_table = move_columns(table, k, permutation[0], permutation[1])
+
+                    isomorf_num = table_to_num(new_table, k)
+                    if isomorf_num not in repeated_nums and isomorf_num > num:
+                        repeated_nums.add(isomorf_num)
 
 
 def put_non_isomorf_nums_in_file(k: int):  # создаёт файл с неизоморфными номерами таблиц
@@ -76,6 +114,28 @@ def get_non_isomorf_nums(k: int):
         while number:
             yield int(number)
             number = f.readline()
+
+
+def get_solo_types(k: int):  # возвращает списки типов алгебр с одной операцией на всех k эл множествах
+    alg_types = {}
+    more_info = {}
+
+    try:
+        for table_num in get_non_isomorf_nums(k):
+            table = generate_table(table_num, k)
+            alg_type = structure.check_structure_with_one_operation(table, k)
+            if alg_type != 'magma..':
+                if alg_type not in alg_types:
+                    alg_types[alg_type] = 1
+                    more_info[alg_type] = []
+                else:
+                    alg_types[alg_type] += 1
+                more_info[alg_type].append(table_num)
+    except KeyboardInterrupt:
+        print('прервано...')
+        return alg_types, more_info
+
+    return alg_types, more_info
 
 
 # -----------------------------вспомогательные функции-----------------------------------------------------------------
@@ -197,11 +257,14 @@ def main():
                 print('налажал в инпуте...')
             else:
                 table_num, set_size = int(command_[2]), int(command_[1])
-                if table_num >= set_size**(set_size*set_size):
-                    print('номер таблицы довольно странный')
+                if set_size > 10:
+                    print('слишком большой размер')
                 else:
-                    table = generate_table(table_num, set_size)
-                    print_table(table, set_size)
+                    if table_num >= set_size**(set_size*set_size):
+                        print('номер таблицы довольно странный')
+                    else:
+                        table = generate_table(table_num, set_size)
+                        print_table(table, set_size)
 
         if command == 'solo':
             print('введите мощность множества')
@@ -210,22 +273,7 @@ def main():
                 print('странная мощность...')
             else:
                 n = int(n)
-                alg_types = {}
-                more_info = {}
-                try:
-                    for table_num in get_non_isomorf_nums(n):
-                        table = generate_table(table_num, n)
-                        alg_type = structure.check_structure_with_one_operation(table, n)
-                        if alg_type != 'magma..':
-                            if alg_type not in alg_types:
-                                alg_types[alg_type] = 1
-                                more_info[alg_type] = []
-                            else:
-                                alg_types[alg_type] += 1
-
-                            more_info[alg_type].append(table_num)
-                except KeyboardInterrupt:
-                    print('прервано...')
+                alg_types, more_info = get_solo_types(n)
 
                 print(structure.colored('типы и сколько:', 'y'))
                 for alg_type in alg_types:
@@ -243,10 +291,19 @@ def main():
                 print('странная мощность...')
             else:
                 n = int(n)
+
+                table1_alg_types, table1_more_info = get_solo_types(n)
+                table1_abel_groups, table1_idem_abel_groups = [], []
+                if 'abel_group' in table1_alg_types:
+                    table1_abel_groups = table1_more_info['abel_group']
+                if 'idem abel_group' in table1_alg_types:
+                    table1_idem_abel_groups = table1_more_info['idem_abel_group']
+                table1_abel_groups = table1_abel_groups + table1_idem_abel_groups
+
                 alg_types = {}
                 more_info = {}
                 try:
-                    for num1 in get_non_isomorf_nums(n):
+                    for num1 in table1_abel_groups:
                         for num2 in get_non_isomorf_nums(n):
                             table1, table2 = generate_table(num1, n), generate_table(num2, n)
 
@@ -262,6 +319,7 @@ def main():
                                 more_info[alg_type].append((num1, num2))
                 except KeyboardInterrupt:
                     print('прервано...')
+                    print(num1, num2)
                 print(alg_types)
                 print(more_info)
 
