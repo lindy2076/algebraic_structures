@@ -230,6 +230,28 @@ def test_md_non_isomorf_gen():
     # print(len(nums))
 
 
+def test_shrinking():  # seems ok
+    table = md.generate_table(1, 2)
+    md.print_table(table, 2)
+    new_table = table_shrink_neutral(table, 2, 0)
+    md.print_table(new_table, 1)
+
+    table2 = [
+        [0, 1, 2, 3],
+        [1, 1, 1, 1],
+        [0, 1, 3, 2],
+        [2, 1, 3, 0]
+    ]
+    new_table2 = table_shrink_neutral(table2, 4, 1)
+    md.print_table(new_table2, 3)
+
+
+def test_convert_string_to_table():
+    s = input()
+    num = md.convert_string_to_num(s)
+    print(num)
+
+
 def main():
     # test_class_init_and_display()
     # test_structure_sw_structure_state()
@@ -237,7 +259,9 @@ def main():
     # test_structure_check_structure_with_one_op2()
     # test_structure_check_structure_with_two_ops()
     # test_neutral()
-    test_md_non_isomorf_gen()
+    # test_md_non_isomorf_gen()
+    # test_shrinking()
+    test_convert_string_to_table()
 
 
 if __name__ == "__main__":

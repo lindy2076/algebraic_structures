@@ -1,4 +1,5 @@
 import colorama
+from copy import deepcopy
 from colorama import Fore, Back, Style
 from properties_check import *
 
@@ -18,8 +19,9 @@ SINGLE_PROPERTIES = ['associativity', 'commutativity', 'idem', 'l_neutral', 'r_n
 DOUBLE_PROPERTIES = ['l_distr', 'r_distr', 'l_absorb', 'r_absorb']
 
 
-def colored(text: str, color: str) -> str:
-    c = Fore.RED
+def colored(text: str, color: str, backcolor: str = None) -> str:
+    c = Fore.BLACK
+    bc = ''
     if color == "g":
         c = Fore.GREEN
     if color == "r":
@@ -30,7 +32,19 @@ def colored(text: str, color: str) -> str:
         c = Fore.YELLOW
     if color == "m":
         c = Fore.MAGENTA
-    return str(c + text + st_reset)
+    if backcolor:
+        if backcolor == "g":
+            bc = Back.GREEN
+        if backcolor == "w":
+            bc = Back.WHITE
+        if backcolor == "b":
+            bc = Back.BLUE
+        if backcolor == "y":
+            bc = Back.YELLOW
+        if backcolor == "m":
+            bc = Back.MAGENTA
+
+    return str(c + bc + text + st_reset)
 
 
 # TODO вроде класс готов, но пока никак не используется. Надо ещё structure_state переписать
@@ -201,9 +215,10 @@ ONE_OPERATION_STRUCTURE_PROPERTIES = [[],  # magma
                                       ]
 
 
-def check_structure_with_one_operation(table, n: int):  # TODO нужен тест
+def check_structure_with_one_operation(table, n: int, table_props=None):  # TODO нужен тест
     structure_type = 'magma..'
-    table_props = table_properties_check(table, n)
+    if not table_props:
+        table_props = table_properties_check(table, n)
 
     if table_props[0]:  # ассоциативна
         structure_type = 'semigroup'
@@ -241,26 +256,36 @@ def check_structure_with_one_operation(table, n: int):  # TODO нужен тес
 def table_shrink_neutral(table, n: int, neutral: int):  # сужение таблицы (без нейтрального)
     if neutral == -1:
         return -1
-    table_with_no_neutral = []  # сужаем таблицу (без 0) # FIXME надо сужать именно строку из нейтральных, а не '0'
-    for j in range(n - 1):
-        for i in range(n - 1):
-            table[j + 1][i + 1] -= 1
-            if table[j + 1][i + 1] == -1:
+    table_with_no_neutral = [[0] * (n-1) for _ in range(n-1)]
+    table = deepcopy(table)
+    for i in range(n - 1):
+        for j in range(n - 1):
+            index1, index2 = j, i
+            if j >= neutral:
+                index1 += 1
+            if i >= neutral:
+                index2 += 1
+            if table[index1][index2] >= neutral:
+                table[index1][index2] -= 1
+            # print(table)
+            if table[index1][index2] == -1:
                 return -1
-        table_with_no_neutral.append(table[j + 1][1:])
+            table_with_no_neutral[j][i] = table[index1][index2]
+
     return table_with_no_neutral
 
 
 # возвращает тип структуры по двум таблицам
-def check_structure_with_two_operations(table1, table2, n: int):
+def check_structure_with_two_operations(table1, table2, n: int, print_solo_structures=False):
     # положим первую операцию сложением, а вторую умножением
     algebra_type = 'nothing'
     double_properties1 = pair_tables_properties_check(table2, table1, n)
     type1 = check_structure_with_one_operation(table1, n)
     type2 = check_structure_with_one_operation(table2, n)
-    # print('table types: ', type1, type2)
+    if print_solo_structures:
+        print('типы таблиц: ', colored(type1, '', 'w'), 'and', colored(type2, '', 'w'))
 
-    if double_properties1[0:2] == [True, True]:  # дистрибутивны
+    if double_properties1[0:2] == [True, True]:  # вторая дистр относительно первой
         if type1 == 'abel_group' and 'semigroup' in type2:
             algebra_type = 'ring'
         elif type1 == 'abel_group' and 'monoid' in type2:
@@ -268,16 +293,31 @@ def check_structure_with_two_operations(table1, table2, n: int):
 
         # проверяем на поле и тело
         table1_neutral = table_property_check('l_neutral', n, table1) == table_property_check('r_neutral', n, table1)
+        table1_neutral = (-1, table_property_check('l_neutral', n, table1))[table1_neutral]
         table2_with_no_neutral = table_shrink_neutral(table2, n, table1_neutral)  # сужаем таблицу (без 0)
         if table2_with_no_neutral == -1:
             return algebra_type  # не получается поле
         type2 = check_structure_with_one_operation(table2_with_no_neutral, n - 1)
-        # print(table2_with_no_neutral, type2)
+        if print_solo_structures:
+            print('вторая операция без нейтрального образует ' + colored(type2, '', 'w'))
         if type1 == 'abel_group' and type2 == 'group':
             algebra_type = 'division ring'
         if type1 == 'abel_group' and 'abel_group' in type2:
             algebra_type = 'field'
     else:  # не дистрибутивно
-        # print('not distributive idk')
+        if print_solo_structures:
+            print('не дистибутивны..')
         pass
     return algebra_type
+
+
+def print_table_properties(table, n: int):
+    table_props = [0] * 10
+    print('-' * 40 + '\nProperties of the table:')
+    for index, propty in enumerate(SINGLE_PROPERTIES):
+        res = table_property_check(propty, n, table)
+        res_color = 'g' if (res is not False and res != -1) else 'r'
+        print(colored(propty + ': ', 'y') + colored(str(res), res_color))
+        table_props[index] = res
+    print('-' * 40)
+    return table_props
